@@ -1,85 +1,55 @@
-# settlegrid-weglot
+# PIPE BIRD — IMPLEMENTATION PACKAGE
 
-Weglot MCP Server with per-call billing via [SettleGrid](https://settlegrid.ai).
+*Everything an implementing Claude Code agent needs to build the game from Phase 0 to a fully-audited ship. This is laid out as the target repo: drop the contents at your repo root.*
 
-[![Powered by SettleGrid](https://img.shields.io/badge/Powered%20by-SettleGrid-10B981?style=flat-square)](https://settlegrid.ai)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/settlegrid/settlegrid-weglot)
+## Quick start
 
-Translate, retrieve, and update website content across multiple languages using the Weglot translation API.
+1. **Confirm prerequisites:** macOS + Xcode + Swift toolchain + `swiftformat` + `jq` on PATH, and a plan defaulting to **Opus**.
+1. **Confirm the one open decision:** the deployment target is pinned to **iOS 17+** (in `KICKOFF_PROMPT.md` / Phase B). Change it if you want a different floor (reach vs. modern APIs).
+1. **Setup (one time):** from the repo root, `chmod +x .claude/hooks/*.sh`, then `git init`. (See `INSTALL.md` for the full Phase-0 checklist incl. verifying the `.claude/` schema against current docs.)
+1. **Launch:** open Claude Code (Opus) at the repo root and paste the block inside `KICKOFF_PROMPT.md`. It self-detects work in progress and resumes, so the same block is safe to paste in any later session.
 
-## Quick Start
+## What’s here (and where it goes)
 
-```bash
-npm install
-cp .env.example .env   # Add your SettleGrid API key
-npm run dev
+```
+root/
+  KICKOFF_PROMPT.md      ← paste this into Claude Code to start/resume
+  INSTALL.md             ← placement + one-time setup + Phase-0 verification
+  README.md              ← this file
+  CLAUDE.md              ← always-loaded rules (tight; points to SPEC)
+  SPEC.md                ← THE single canonical contract (game + API + step order)
+  PROGRESS.md            ← the build ledger (gate status, decisions)
+  OPERATIONS_RUNBOOK.md  ← context discipline, multi-session resume, ship-audit sweep
+  TRACEABILITY_MATRIX.md ← every SPEC requirement → its test
+  PHASE_B_HAZARDS.md     ← SpriteView/SwiftUI silent-bug list (read before Phase B)
+  PrivacyInfo.xcprivacy  ← pre-filled (UserDefaults / CA92.1) → app target in Phase E
+  Makefile               ← canonical commands (test / test-nogolden / gate / app / record-golden)
+  .gitignore  .swiftformat
+  .claude/
+    settings.json        ← hooks + pre-approved commands
+    agents/              ← spec-auditor, hostile-reviewer, test-runner, ios-researcher
+    hooks/               ← on-edit.sh (format+fast tests), gate-guard.sh (advisory)
+    commands/            ← /gate, /record-golden, /resume, /phase-done
+  PipeBirdCore/Tests/PipeBirdCoreTests/
+    TestSupport.swift                         ← shared fixtures
+    DeterminismTests / CollisionBoundaryTests / FrameRateIndependenceTests / GoldenTraceTests.swift   ← PRE-WRITTEN (drop-in oracles)
+    BirdDynamics / RNG / Spawning / Scoring / Difficulty / StateMachine / Event / Robustness Tests.swift   ← 8 STUBS (agent fills, currently XCTFail)
+  docs/                  ← rationale & audits (NOT specs):
+    BUILD_PLAYBOOK.md, CONSISTENCY_AUDIT.md, IMPLEMENTABILITY_AUDIT.md,
+    REFERENCE_TESTS_ORCHESTRATION_GUIDE.md, STRATEGIC_BRIEF.md
 ```
 
-## Methods
+## What the agent PRODUCES (not in this package — built during the session)
 
-| Method | Description | Cost |
-|--------|-------------|------|
-| `translate_content(l_from: string, l_to: string, words: Array<{ w: string; t: number }>, request_url?: string)` | Translate an array of text strings from one language to another | 3¢ |
-| `get_api_status()` | Check Weglot API status and validate the API key | 1¢ |
-| `get_translations(l_from?: string, l_to?: string)` | Retrieve existing translations for a language pair | 1¢ |
-| `update_translations(l_from: string, l_to: string, words: Array<{ w: string; t: number; to?: string }>)` | Create or update translations for a language pair | 3¢ |
+`PipeBirdCore/Package.swift` + `Sources/PipeBirdCore/*.swift` (the engine, per SPEC §6/§7), the `PipeBird` app target (SwiftUI + SpriteKit shell, Phase B+), app icon/launch assets (Phase E), and the recorded GoldenTrace fixture.
 
-## Parameters
+## Honest caveats (read these)
 
-### translate_content
-- `l_from` (string, required) — BCP 47 source language code (e.g. en, fr, de)
-- `l_to` (string, required) — BCP 47 target language code (e.g. fr, es, ja)
-- `words` (array, required) — Array of word objects with 'w' (text) and 't' (type: 1=text, 2=HTML) fields
-- `request_url` (string) — URL of the page being translated (for context)
+- **Nothing here has been compiled.** The tests are written against the SPEC API with no toolchain to check them. Phase A’s first task is to get them compiling against a stub engine and reconcile any spec↔test mismatch *as a spec question, not a silent edit*. If the agent reports mismatches there, that’s the package working — surfacing on-paper risk early.
+- **`SPEC.md` is the only spec.** The standalone Phase-A spec was consolidated into it and is intentionally not included; `docs/` holds rationale/audits, not authority.
+- **`.claude/` schema** (subagent frontmatter, hook config + stdin shape, slash-command format) is as-of-authoring — Phase 0 verifies it against code.claude.com/docs and adjusts if drifted.
+- **Human-only steps** (not automatable): Apple Developer account, code signing/provisioning, App Store Connect listing + screenshots, Game Center leaderboard creation, age rating, real-device testing, submission. The build is produced *ready for* these; the agent prints them as a closing checklist.
 
-### get_api_status
+## Provenance
 
-### get_translations
-- `l_from` (string) — BCP 47 source language code to filter by (e.g. en)
-- `l_to` (string) — BCP 47 target language code to filter by (e.g. fr)
-
-### update_translations
-- `l_from` (string, required) — BCP 47 source language code (e.g. en)
-- `l_to` (string, required) — BCP 47 target language code (e.g. fr)
-- `words` (array, required) — Array of word objects with 'w' (original text), 't' (type), and 'to' (translated text) fields
-
-## Environment Variables
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `SETTLEGRID_API_KEY` | Yes | Your SettleGrid API key from [settlegrid.ai](https://settlegrid.ai) |
-| `WEGLOT_API_KEY` | Yes | Weglot API key from [https://dashboard.weglot.com/settings/setup](https://dashboard.weglot.com/settings/setup) |
-
-## Upstream API
-
-- **Provider**: Weglot
-- **Base URL**: https://api.weglot.com
-- **Auth**: API key required
-- **Docs**: https://developers.weglot.com/api/reference
-
-## Deploy
-
-### Docker
-
-```bash
-docker build -t settlegrid-weglot .
-docker run -e SETTLEGRID_API_KEY=sg_live_xxx -p 3000:3000 settlegrid-weglot
-```
-
-### Vercel
-
-Click the "Deploy with Vercel" button above, or:
-
-```bash
-npm run build
-vercel --prod
-```
-
-## License
-
-MIT - see [LICENSE](LICENSE)
-
----
-
-Built with [SettleGrid](https://settlegrid.ai) — The Settlement Layer for the AI Economy
+Concept selected from a battletested shortlist (`docs/STRATEGIC_BRIEF.md`); orchestration rationale in `docs/BUILD_PLAYBOOK.md`; the spec was hardened by two audits (`docs/CONSISTENCY_AUDIT.md`, `docs/IMPLEMENTABILITY_AUDIT.md`) whose findings (F#/I#) are folded into `SPEC.md`.
