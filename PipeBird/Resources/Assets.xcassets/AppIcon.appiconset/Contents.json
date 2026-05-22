@@ -1,0 +1,15 @@
+{
+  "comment" : "UNVERIFIED placeholder. Single-size iOS app icon slot (1024x1024). Drop the final icon art here (icon.png) on a Mac; final art is human-only.",
+  "images" : [
+    {
+      "filename" : "icon.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "size" : "1024x1024"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

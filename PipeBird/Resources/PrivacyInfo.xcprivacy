@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  PrivacyInfo.xcprivacy — add to the PipeBird app target (Phase E).
+  This game collects no data and does no tracking. It DOES use UserDefaults (high-score persistence),
+  which is a "required reason API" — declaring it (reason CA92.1: access to data only the app can read)
+  is what prevents an ITMS-91053 App Store rejection.
+  If you later add APIs for file timestamps / system boot time / disk space, add their categories +
+  reasons here. Have the ios-researcher subagent confirm current reason codes at submission time.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>NSPrivacyTracking</key>
+    <false/>
+
+    <key>NSPrivacyTrackingDomains</key>
+    <array/>
+
+    <key>NSPrivacyCollectedDataTypes</key>
+    <array/>
+
+    <key>NSPrivacyAccessedAPITypes</key>
+    <array>
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>CA92.1</string>
+            </array>
+        </dict>
+    </array>
+</dict>
+</plist>

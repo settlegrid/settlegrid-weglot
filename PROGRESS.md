@@ -75,6 +75,20 @@ Current phase: B
   - **MINOR-3 (resolved)** — added `ScoringTests.testCrashingPipeDoesNotScore` to cover F3's practical
     guarantee (a body-crashing pipe crashes before/without scoring).
 
+- Phase B–E scaffold (UNVERIFIED — written on Linux, never compiled/run):
+  - Added `PipeBird/` (the iOS app) + `docs/PHASE_B_SPEC.md` (the just-in-time Phase-B spec, folding in
+    PHASE_B_HAZARDS H1–H5 and SPEC §10). Render shell = SwiftUI `GameView` (holds ONE `GameScene` —
+    H1) over a SpriteKit `GameScene` that drives `PipeBirdSimulation` and maps `state`→nodes with NO
+    gameplay logic in the shell. Includes BirdNode (googly eyes/shocked face), PipeNode, Effects
+    (score pop + crash poof), AudioEngine (+persisted mute), HighScoreStore (UserDefaults), and
+    Phase-D meta behind `FeatureFlags` (Evil mode, GameCenterManager, StoreKit TipJar; the latter two
+    default OFF, needing Apple/ASC setup). Xcode project is declarative via XcodeGen (`project.yml`);
+    `make project` then `make app` on a Mac. Assets/Info.plist/PrivacyInfo bundled (final icon art +
+    sound files are human-supplied).
+  - This scaffold compiles ONLY on macOS + Xcode (SwiftUI/SpriteKit/GameKit/StoreKit). It is a head
+    start for the Mac session, NOT verified: expect compile fixes, then work the Gate-B checklist in
+    `docs/PHASE_B_SPEC.md §6`. The Phase-A `make gate` is unaffected (the app is outside PipeBirdCore).
+
 ## Human-only / ready-for (post-session, on a Mac) — see OPERATIONS_RUNBOOK §7
 - Apple Developer account; code signing / provisioning; App Store Connect listing + screenshots;
   Game Center leaderboard creation; age rating; real-device testing; submission.

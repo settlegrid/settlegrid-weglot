@@ -4,6 +4,7 @@ ARTIFACTS := .claude/artifacts
 TESTLOG   := $(ARTIFACTS)/last-test.log
 BUILDLOG  := $(ARTIFACTS)/last-build.log
 GOLDEN    := $(TESTDIR)/GoldenTraceTests.swift
+APP_DIR    := PipeBird
 APP_SCHEME := PipeBird
 SIM        := platform=iOS Simulator,name=iPhone 15
 
@@ -13,7 +14,7 @@ SIM        := platform=iOS Simulator,name=iPhone 15
 SHELL := /bin/bash
 .SHELLFLAGS := -o pipefail -c
 
-.PHONY: all init-dirs build test test-nogolden format format-check gate app record-golden clean
+.PHONY: all init-dirs build test test-nogolden format format-check gate project app record-golden clean
 
 all: gate
 
@@ -46,9 +47,15 @@ gate: format-check build test
 		|| { echo "GATE FAIL: GoldenTrace fixture is empty — run 'make record-golden'"; exit 1; }
 	@echo ">> GATE PASS"
 
-# iOS app build (Phase B+). Requires macOS + Xcode.
-app:
-	xcodebuild -scheme $(APP_SCHEME) -destination '$(SIM)' build 2>&1 | tee $(ARTIFACTS)/last-app-build.log
+# Generate the iOS app's Xcode project from PipeBird/project.yml (Phase B+; macOS only).
+# Requires XcodeGen:  brew install xcodegen
+project:
+	cd $(APP_DIR) && xcodegen generate
+
+# iOS app build (Phase B+). Requires macOS + Xcode + a generated project (run 'make project' first).
+app: init-dirs
+	cd $(APP_DIR) && xcodebuild -project PipeBird.xcodeproj -scheme $(APP_SCHEME) \
+		-destination '$(SIM)' build 2>&1 | tee ../$(ARTIFACTS)/last-app-build.log
 
 record-golden:
 	@echo "One-time GoldenTrace freeze:"
