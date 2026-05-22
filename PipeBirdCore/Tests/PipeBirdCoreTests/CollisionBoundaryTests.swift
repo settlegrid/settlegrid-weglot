@@ -21,26 +21,29 @@
 // AUDITOR ORACLE (hostile-reviewer): confirm the production collision uses a clamp-based nearest-point
 //   distance test for pipe rects (not a pure vertical compare), and that floor/ceiling are checked.
 
-import XCTest
 @testable import PipeBirdCore
+import XCTest
 
 final class CollisionBoundaryTests: XCTestCase {
-
     private let c = GameConfig.standard
 
     /// A .playing state with the bird at `birdY` and a single pipe centered on the bird's x.
     /// Pipe straddles the bird (full horizontal overlap) so vertical cases are clean.
-    private func straddlingState(birdY: Double,
-                                 gapCenterY: Double = 350,
-                                 gapHeight: Double = 220) -> GameState {
+    private func straddlingState(
+        birdY: Double,
+        gapCenterY: Double = 350,
+        gapHeight: Double = 220
+    ) -> GameState {
         var s = GameState.initial(config: c)
         s.status = .playing
         s.birdY = birdY
-        s.pipes = [Pipe(id: 0,
-                        x: c.birdX - c.pipeWidth / 2,   // straddles bird
-                        gapCenterY: gapCenterY,
-                        gapHeight: gapHeight,
-                        scored: false)]
+        s.pipes = [Pipe(
+            id: 0,
+            x: c.birdX - c.pipeWidth / 2, // straddles bird
+            gapCenterY: gapCenterY,
+            gapHeight: gapHeight,
+            scored: false
+        )]
         return s
     }
 
@@ -50,7 +53,7 @@ final class CollisionBoundaryTests: XCTestCase {
         var s = GameState.initial(config: c)
         s.status = .playing
         s.pipes = []
-        s.birdY = c.birdRadius            // birdY - r == 0 (inclusive contact)
+        s.birdY = c.birdRadius // birdY - r == 0 (inclusive contact)
         XCTAssertEqual(PipeBirdEngine.collision(state: s, config: c), .floor)
     }
 
@@ -88,19 +91,22 @@ final class CollisionBoundaryTests: XCTestCase {
     }
 
     // MARK: CORNER — the discriminating test (defeats vertical-only collision)
+
     // Pipe placed so the bird overlaps it by only (r-1) horizontally; bird center sits BELOW gapTop
     // (vertically inside the gap). Nearest solid point is the top-pipe's lower-left CORNER (pipe.x, gapTop).
     // True crash depends on distance(center, corner) vs radius — pure vertical compare gets this wrong.
 
-    private func cornerState(distanceToCorner d: Double,
-                             gapCenterY: Double = 350,
-                             gapHeight: Double = 220) -> GameState {
+    private func cornerState(
+        distanceToCorner d: Double,
+        gapCenterY: Double = 350,
+        gapHeight: Double = 220
+    ) -> GameState {
         let gapTop = gapCenterY + gapHeight / 2
-        let dx = c.birdRadius - 1.0                 // 13: horizontal gap from center to pipe's left edge
-        let pipeX = c.birdX + dx                    // pipe just to the right of the bird
+        let dx = c.birdRadius - 1.0 // 13: horizontal gap from center to pipe's left edge
+        let pipeX = c.birdX + dx // pipe just to the right of the bird
         // distance^2 = dx^2 + (gapTop - birdY)^2  ->  solve for birdY below gapTop
         let dy = (d * d - dx * dx).squareRoot()
-        let birdY = gapTop - dy                     // center vertically inside the gap, near the corner
+        let birdY = gapTop - dy // center vertically inside the gap, near the corner
         var s = GameState.initial(config: c)
         s.status = .playing
         s.birdY = birdY
@@ -111,8 +117,10 @@ final class CollisionBoundaryTests: XCTestCase {
     func testCorner_justMiss_noCrash() {
         // distance to corner = r + 0.5 (> radius) => MISS, even though birdY + r reaches above gapTop.
         let s = cornerState(distanceToCorner: c.birdRadius + 0.5)
-        XCTAssertNil(PipeBirdEngine.collision(state: s, config: c),
-                     "Vertical-only collision wrongly reports a hit here; correct circle-rect says miss")
+        XCTAssertNil(
+            PipeBirdEngine.collision(state: s, config: c),
+            "Vertical-only collision wrongly reports a hit here; correct circle-rect says miss"
+        )
     }
 
     func testCorner_justHit_isCrash() {
@@ -127,15 +135,28 @@ final class CollisionBoundaryTests: XCTestCase {
         var rng = DeterministicRNG(seed: c.seed)
         let crashing = straddlingState(birdY: 470) // center inside top pipe -> crash next step
 
-        let (after, events) = PipeBirdEngine.step(state: crashing, config: c,
-                                                  input: Input(targetGapY: 350), rng: &rng)
+        let (after, events) = PipeBirdEngine.step(
+            state: crashing,
+            config: c,
+            input: Input(targetGapY: 350),
+            rng: &rng
+        )
         XCTAssertEqual(after.status, .crashed)
-        XCTAssertEqual(events.filter { if case .crashed = $0 { return true }; return false }.count, 1,
-                       "Exactly one .crashed event")
+        XCTAssertEqual(
+            events.filter { if case .crashed = $0 { return true }
+                return false
+            }.count,
+            1,
+            "Exactly one .crashed event"
+        )
 
         // Terminal: stepping a crashed state changes nothing and emits nothing.
-        let (after2, events2) = PipeBirdEngine.step(state: after, config: c,
-                                                    input: Input(targetGapY: 200), rng: &rng)
+        let (after2, events2) = PipeBirdEngine.step(
+            state: after,
+            config: c,
+            input: Input(targetGapY: 200),
+            rng: &rng
+        )
         XCTAssertEqual(after, after2, "Crashed state is inert to step()")
         XCTAssertTrue(events2.isEmpty, "No events after crash until reset")
     }

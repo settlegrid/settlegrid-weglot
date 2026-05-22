@@ -7,6 +7,12 @@ GOLDEN    := $(TESTDIR)/GoldenTraceTests.swift
 APP_SCHEME := PipeBird
 SIM        := platform=iOS Simulator,name=iPhone 15
 
+# Honor the documented "non-zero exit = fail" contract. Default /bin/sh has no pipefail, so a failing
+# `swift test | tee` would be masked by tee's exit 0. Run recipes under bash with pipefail so the gate
+# truly fails when build/test fails. (Decision logged in PROGRESS.md.)
+SHELL := /bin/bash
+.SHELLFLAGS := -o pipefail -c
+
 .PHONY: all init-dirs build test test-nogolden format format-check gate app record-golden clean
 
 all: gate

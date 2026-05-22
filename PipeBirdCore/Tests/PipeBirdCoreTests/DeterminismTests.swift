@@ -14,11 +14,10 @@
 //   (a) compare full GameState with ==, (b) compare event lists with ==, (c) thread ONE
 //   rng instance across a run (never a fresh rng per step). Hold the agent's tests to this.
 
-import XCTest
 @testable import PipeBirdCore
+import XCTest
 
 final class DeterminismTests: XCTestCase {
-
     private let config = GameConfig.standard
 
     /// Deterministic, trig-free input schedule that exercises spawns at varied gaps.
@@ -30,18 +29,20 @@ final class DeterminismTests: XCTestCase {
     // MARK: step-level determinism (the strongest claim: exact equality)
 
     func testStepLevel_sameInputs_produceBitIdenticalStatesAndEvents() {
-        let steps = 4_000   // long enough to spawn, score, and likely crash+stay crashed
+        let steps = 4000 // long enough to spawn, score, and likely crash+stay crashed
 
         func run() -> (GameState, [GameEvent]) {
             var state = GameState.initial(config: config)
             state.status = .playing
-            var rng = DeterministicRNG(seed: config.seed)   // ONE rng threaded through the run
+            var rng = DeterministicRNG(seed: config.seed) // ONE rng threaded through the run
             var events: [GameEvent] = []
-            for i in 0..<steps {
-                let (next, evs) = PipeBirdEngine.step(state: state,
-                                                      config: config,
-                                                      input: input(at: i),
-                                                      rng: &rng)
+            for i in 0 ..< steps {
+                let (next, evs) = PipeBirdEngine.step(
+                    state: state,
+                    config: config,
+                    input: input(at: i),
+                    rng: &rng
+                )
                 state = next
                 events.append(contentsOf: evs)
             }
@@ -61,7 +62,7 @@ final class DeterminismTests: XCTestCase {
         func run() -> GameState {
             var sim = PipeBirdSimulation(config: config)
             sim.start()
-            for i in 0..<2_000 {
+            for i in 0 ..< 2000 {
                 _ = sim.advance(realDelta: 1.0 / 60.0, input: input(at: i))
             }
             return sim.state
@@ -76,14 +77,14 @@ final class DeterminismTests: XCTestCase {
 
         func playOnce() -> GameState {
             sim.start()
-            for i in 0..<1_500 {
+            for i in 0 ..< 1500 {
                 _ = sim.advance(realDelta: 1.0 / 60.0, input: input(at: i))
             }
             return sim.state
         }
 
         let first = playOnce()
-        sim.reset()                 // must restore initial state, clear accumulator, re-seed rng
+        sim.reset() // must restore initial state, clear accumulator, re-seed rng
         let second = playOnce()
 
         XCTAssertEqual(first, second, "reset() must fully restore state so a replay reproduces exactly")

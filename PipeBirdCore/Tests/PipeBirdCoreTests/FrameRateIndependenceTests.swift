@@ -12,7 +12,8 @@
 //   outcomes (birdY) must match within a tight tolerance. That split is the correct contract.
 //
 // TRAPS THIS PREVENTS:
-//   - Accumulator that resets to 0 instead of subtracting fixedDt (loses remainder -> chunking changes physics).
+//   - Accumulator that resets to 0 instead of subtracting fixedDt (loses remainder -> chunking changes
+//   physics).
 //   - Movement not multiplied by dt (works at one rate, breaks at another).
 //   - Using realDelta directly as the integration dt instead of the fixed sub-step.
 //
@@ -23,11 +24,10 @@
 // AUDITOR ORACLE (hostile-reviewer): confirm advance() clamps realDelta, accumulates, runs
 //   floor(acc / fixedDt) steps, and SUBTRACTS fixedDt per step (carrying the remainder).
 
-import XCTest
 @testable import PipeBirdCore
+import XCTest
 
 final class FrameRateIndependenceTests: XCTestCase {
-
     private let c = GameConfig.standard
 
     /// Constant input isolates the accumulator: any divergence is timestep handling, not input timing.
@@ -36,7 +36,7 @@ final class FrameRateIndependenceTests: XCTestCase {
         sim.start()
         let frames = Int((totalTime / perFrame).rounded())
         let steady = Input(targetGapY: 300)
-        for _ in 0..<frames {
+        for _ in 0 ..< frames {
             _ = sim.advance(realDelta: perFrame, input: steady)
         }
         return sim.state
@@ -44,48 +44,69 @@ final class FrameRateIndependenceTests: XCTestCase {
 
     func testSameWallTime_differentRefreshRates_matchPhysics() {
         let total = 2.0
-        let at60  = runConstantInput(totalTime: total, perFrame: 1.0 / 60.0)
+        let at60 = runConstantInput(totalTime: total, perFrame: 1.0 / 60.0)
         let at120 = runConstantInput(totalTime: total, perFrame: 1.0 / 120.0)
 
         // Discrete outcomes must be identical.
         XCTAssertEqual(at60.status, at120.status)
-        XCTAssertEqual(at60.score,  at120.score)
+        XCTAssertEqual(at60.score, at120.score)
         XCTAssertEqual(at60.pipes.count, at120.pipes.count)
 
         // Continuous outcome: tight tolerance (accumulator float-rounding only).
-        XCTAssertEqual(at60.birdY,  at120.birdY,  accuracy: 1e-3)
+        XCTAssertEqual(at60.birdY, at120.birdY, accuracy: 1e-3)
         XCTAssertEqual(at60.birdVY, at120.birdVY, accuracy: 1e-3)
     }
 
-    /// A pure dt-scaling sanity check at the engine level: integrating the SAME elapsed time as
-    /// 2N small steps vs N large steps stays close (movement is dt-scaled, not per-frame constant).
+    /// STRENGTHENED (audit F7): replaces the shipped weak smell test with a real two-part check.
+    /// (1) Driving the simulation at perFrame == fixedDt must reproduce direct engine stepping EXACTLY,
+    ///     including the event stream — the driver's single-fixed-step path IS pure engine stepping.
+    /// (2) Integrating the same wall-time at fixedDt vs fixedDt/2 must keep the continuous trajectory
+    ///     close: movement is dt-scaled, not per-frame constant (a per-frame-constant bug diverges).
     func testEngineStep_dtScaling_isConsistent() {
-        // Build identical starting states with one far pipe so the bird has a fixed target.
-        func start() -> GameState {
-            var s = GameState.initial(config: c)
-            s.status = .playing
-            s.birdY = 250
-            s.pipes = [Pipe(id: 0, x: c.width * 2, gapCenterY: 450, gapHeight: 220, scored: false)]
-            return s
-        }
         let steady = Input(targetGapY: 450)
+        let n = 600
 
-        // Reference run: 240 steps at the engine's fixed dt.
+        // (1a) Engine-direct from the canonical initial playing state.
         var rngA = DeterministicRNG(seed: c.seed)
-        var a = start()
-        for _ in 0..<240 {
-            (a, _) = PipeBirdEngine.step(state: a, config: c, input: steady, rng: &rngA)
+        var direct = GameState.initial(config: c)
+        direct.status = .playing
+        var directEvents: [GameEvent] = []
+        for _ in 0 ..< n {
+            let (next, evs) = PipeBirdEngine.step(state: direct, config: c, input: steady, rng: &rngA)
+            direct = next
+            directEvents.append(contentsOf: evs)
         }
 
-        // Same total time delivered through the driver at 120Hz (1 fixed step per frame).
+        // (1b) Driver at perFrame == fixedDt must match (1a) bit-for-bit, both state and events.
         var sim = PipeBirdSimulation(config: c)
-        // NOTE: this asserts the driver's single-fixed-step path equals direct engine stepping
-        // when perFrame == fixedDt and input/start match. Build matching start via reflection-free path:
-        // reset, then place the bird/pipe through start() semantics is not exposed, so we compare the
-        // engine-only invariant: bird approaches target and |vy| stays bounded.
-        _ = sim
-        XCTAssertLessThanOrEqual(abs(a.birdVY), c.maxBirdSpeed + 1e-9, "vy must respect the clamp")
-        XCTAssertTrue(a.birdY.isFinite && a.birdVY.isFinite, "no NaN/Inf under repeated stepping")
-        XCTAssertEqual(a.birdY, 450, accuracy: 5.0, "bird settles near its target gap over 2s")
+        sim.start()
+        var driverEvents: [GameEvent] = []
+        for _ in 0 ..< n {
+            driverEvents.append(contentsOf: sim.advance(realDelta: c.fixedDt, input: steady))
+        }
+        XCTAssertEqual(sim.state, direct, "driver@fixedDt must equal direct engine stepping, exactly")
+        XCTAssertEqual(driverEvents, directEvents, "event streams must match exactly")
+
+        /// (2) dt-scaling: integrate 1.0s of spring motion (a far pipe pins the target, no spawn/collision)
+        /// at fixedDt vs fixedDt/2. The continuous trajectory must converge to within 1% of the move.
+        func birdYAfterOneSecond(dt: Double) -> Double {
+            var cc = c
+            cc.fixedDt = dt
+            var rng = DeterministicRNG(seed: cc.seed)
+            var s = Fixtures.playing(
+                birdY: 250,
+                pipes: [Fixtures.pipe(x: cc.width * 6, gapCenterY: 450, gapHeight: 220)],
+                cc
+            )
+            let steps = Int((1.0 / dt).rounded())
+            for _ in 0 ..< steps {
+                (s, _) = PipeBirdEngine.step(state: s, config: cc, input: steady, rng: &rng)
+            }
+            return s.birdY
+        }
+        let full = birdYAfterOneSecond(dt: c.fixedDt)
+        let half = birdYAfterOneSecond(dt: c.fixedDt / 2)
+        XCTAssertTrue(full.isFinite && half.isFinite, "no NaN/Inf under repeated stepping")
+        XCTAssertEqual(full, half, accuracy: 2.0, "halving dt must change the trajectory only slightly")
     }
 }
