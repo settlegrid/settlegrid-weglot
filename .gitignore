@@ -1,0 +1,17 @@
+# Swift / SwiftPM
+.build/
+.swiftpm/
+Package.resolved
+
+# Xcode
+DerivedData/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+
+# Transient hook artifacts (test/build logs)
+.claude/artifacts/
+
+# macOS
+.DS_Store

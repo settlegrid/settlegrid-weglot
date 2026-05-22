@@ -1,0 +1,13 @@
+# Pinned so the PostToolUse hook reformats identically every run (idempotent → no churn).
+# Recommend pinning the tool version too (e.g. via Mintfile/brew) and noting it in PROGRESS.md.
+--swiftversion 5.9
+--indent 4
+--maxwidth 110
+--wraparguments before-first
+--wrapparameters before-first
+--wrapcollections before-first
+--commas inline
+--trimwhitespace always
+--semicolons never
+--self remove
+--exclude .build,DerivedData

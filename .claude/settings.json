@@ -1,0 +1,36 @@
+{
+  "_comment": "VERIFY against code.claude.com/docs in Phase 0: hook event names, the matcher key, and the stdin JSON shape passed to hook commands may differ by Claude Code version. Adjust before relying on them.",
+  "permissions": {
+    "allow": [
+      "Bash(make:*)",
+      "Bash(swift build:*)", "Bash(swift test:*)", "Bash(swift package:*)",
+      "Bash(swiftformat:*)", "Bash(xcodebuild:*)",
+      "Bash(git init:*)", "Bash(git add:*)", "Bash(git commit:*)", "Bash(git log:*)",
+      "Bash(mkdir:*)", "Bash(jq:*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          { "type": "command", "command": ".claude/hooks/on-edit.sh" }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": ".claude/hooks/gate-guard.sh" }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "echo '--- PROGRESS (top) ---'; sed -n '1,16p' PROGRESS.md" }
+        ]
+      }
+    ]
+  }
+}
